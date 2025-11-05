@@ -1,161 +1,134 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
-import api from '../config/api'
-import toast from 'react-hot-toast'
+import { createContext, useContext, useReducer, useEffect } from "react";
+import api from "../config/api";
+import toast from "react-hot-toast";
 
-const AuthContext = createContext()
+const AuthContext = createContext(null);
 
 const initialState = {
   user: null,
   token: null,
   isAuthenticated: false,
-  isLoading: true,
-}
+  isLoading: false,
+};
 
 function authReducer(state, action) {
   switch (action.type) {
-    case 'LOGIN_START':
-      return { ...state, isLoading: true }
-    case 'LOGIN_SUCCESS':
+    case "LOADING":
+      return { ...state, isLoading: true };
+    case "SUCCESS":
       return {
         ...state,
         user: action.payload.user,
         token: action.payload.token,
         isAuthenticated: true,
         isLoading: false,
-      }
-    case 'LOGIN_FAILURE':
-      return {
-        ...state,
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      }
-    case 'LOGOUT':
-      return {
-        ...state,
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      }
-    case 'UPDATE_USER':
-      return {
-        ...state,
-        user: { ...state.user, ...action.payload },
-      }
+      };
+    case "FAILURE":
+      return { ...state, isLoading: false };
+    case "LOGOUT":
+      return { user: null, token: null, isAuthenticated: false, isLoading: false };
     default:
-      return state
+      return state;
   }
 }
 
-export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(authReducer, initialState)
+export const AuthProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for existing auth on mount
+  // 🔹 Load token & user from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    const user = localStorage.getItem('user')
-    
+    const token = localStorage.getItem("auth_token");
+    const user = localStorage.getItem("user");
     if (token && user) {
-      try {
-        const userData = JSON.parse(user)
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: { user: userData, token },
-        })
-      } catch (error) {
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user')
-        dispatch({ type: 'LOGIN_FAILURE' })
-      }
-    } else {
-      dispatch({ type: 'LOGIN_FAILURE' })
-    }
-  }, [])
-
-  const login = async (credentials) => {
-    try {
-      dispatch({ type: 'LOGIN_START' })
-      
-      const response = await api.post('/auth/login', credentials)
-      const { user, token } = response.data.data
-      
-      localStorage.setItem('auth_token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      
       dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { user, token },
-      })
-      
-      toast.success('Login successful!')
-      return { success: true }
-    } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE' })
-      const message = error.message || 'Login failed'
-      toast.error(message)
-      return { success: false, error: message }
+        type: "SUCCESS",
+        payload: { user: JSON.parse(user), token },
+      });
     }
-  }
+  }, []);
 
-  const register = async (userData) => {
-    try {
-      dispatch({ type: 'LOGIN_START' })
-      
-      const response = await api.post('/auth/register', userData)
-      const { user, token } = response.data.data
-      
-      localStorage.setItem('auth_token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { user, token },
-      })
-      
-      toast.success('Registration successful!')
-      return { success: true }
-    } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE' })
-      const message = error.message || 'Registration failed'
-      toast.error(message)
-      return { success: false, error: message }
-    }
-  }
+  // 🔹 REGISTER USER
+const registerUser = async (userData) => {
+  try {
+    dispatch({ type: "LOADING" });
+    const { confirmPassword, ...payload } = userData;
+    console.log("Register payload sent to backend:", payload);
 
+    const response = await api.post("/api/auth/register", payload);
+    console.log("Full backend register response:", response.data);
+
+    const data = response.data?.data || {};
+    const token = data.token || data.accessToken;
+    const user = data.user || null;
+
+    if (!token || !user) throw new Error("Invalid registration response from backend");
+
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    dispatch({ type: "SUCCESS", payload: { user, token } });
+    toast.success("Registration successful!");
+    return { success: true };
+  } catch (error) {
+    console.error("Registration error:", error);
+    dispatch({ type: "FAILURE" });
+    const msg = error.response?.data?.message || "Registration failed";
+    toast.error(msg);
+    return { success: false, error: msg };
+  }
+};
+
+// 🔹 LOGIN USER
+const login = async (credentials) => {
+  try {
+    dispatch({ type: "LOADING" });
+    console.log("Login payload being sent:", credentials);
+
+    const response = await api.post("/api/auth/login", credentials);
+    console.log("Full backend login response:", response.data);
+
+    const data = response.data?.data || {};
+    const token = data.token || data.accessToken;
+    const user = data.user || null;
+
+    if (!token || !user) throw new Error("Invalid login response from backend");
+
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    dispatch({ type: "SUCCESS", payload: { user, token } });
+    toast.success("Login successful!");
+    return { success: true };
+  } catch (error) {
+    console.error("Login error:", error);
+    dispatch({ type: "FAILURE" });
+    const msg = error.response?.data?.message || "Login failed";
+    toast.error(msg);
+    return { success: false, error: msg };
+  }
+};
+
+
+  // 🔹 LOGOUT USER
   const logout = () => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user')
-    dispatch({ type: 'LOGOUT' })
-    toast.success('Logged out successfully')
-  }
-
-  const updateUser = (userData) => {
-    const updatedUser = { ...state.user, ...userData }
-    localStorage.setItem('user', JSON.stringify(updatedUser))
-    dispatch({ type: 'UPDATE_USER', payload: userData })
-  }
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+    dispatch({ type: "LOGOUT" });
+    toast.success("Logged out successfully");
+  };
 
   const value = {
     ...state,
+    registerUser,
     login,
-    register,
     logout,
-    updateUser,
-  }
+  };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
+};

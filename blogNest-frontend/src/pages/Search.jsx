@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from 'react-query'
 import { Link } from 'react-router-dom'
-import { Search, Filter, Calendar, User, Eye, Heart, MessageCircle } from 'lucide-react'
+import { Search as SearchIcon, Filter, Calendar, User, Eye, Heart, MessageCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import api from '../config/api'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -72,7 +72,7 @@ function Search() {
         {/* Search Form */}
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative max-w-2xl">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
               value={query}
@@ -140,7 +140,7 @@ function Search() {
             </div>
           ) : results.length === 0 ? (
             <div className="card p-12 text-center">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <SearchIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
               <p className="text-gray-600">Try adjusting your search terms or filters.</p>
             </div>
@@ -214,7 +214,7 @@ function Search() {
         </div>
       ) : (
         <div className="card p-12 text-center">
-          <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <SearchIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Start your search</h3>
           <p className="text-gray-600">Enter a search term to find blogs, authors, and topics.</p>
         </div>

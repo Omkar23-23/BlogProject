@@ -20,8 +20,16 @@ function Login() {
   } = useForm()
 
   const onSubmit = async (data) => {
-    const result = await login(data)
-    if (result.success) {
+    // ✅ Backend expects "usernameOrEmail"
+    const payload = {
+      usernameOrEmail: data.usernameOrEmail.trim(),
+      password: data.password,
+    }
+
+    console.log("🔹 Login payload being sent:", payload)
+
+    const result = await login(payload)
+    if (result?.success) {
       navigate(from, { replace: true })
     }
   }
@@ -55,26 +63,22 @@ function Login() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="label">
-                Email address
+              <label htmlFor="usernameOrEmail" className="label">
+                Email or Username
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
-                  {...register('email', {
-                    required: 'Email is required',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address',
-                    },
+                  {...register('usernameOrEmail', {
+                    required: 'Email or username is required',
                   })}
-                  type="email"
+                  type="text"
                   className="input pl-10"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or username"
                 />
               </div>
-              {errors.email && (
-                <p className="error-text">{errors.email.message}</p>
+              {errors.usernameOrEmail && (
+                <p className="error-text">{errors.usernameOrEmail.message}</p>
               )}
             </div>
 

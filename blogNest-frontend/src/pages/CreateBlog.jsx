@@ -8,34 +8,54 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 
 function CreateBlog() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const navigate = useNavigate()
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm()
 
-  // Fetch categories for dropdown
+  // ✅ Fetch categories
   const { data: categoriesData } = useQuery(
     'categories',
-    () => api.get('/categories'),
-    {
-      staleTime: 10 * 60 * 1000,
-    }
+    async () => await api.get('/categories'),
+    { staleTime: 10 * 60 * 1000 }
   )
 
   const categories = categoriesData?.data?.data || []
 
+  // ✅ Submit handler
   const onSubmit = async (data) => {
     setIsSubmitting(true)
+    setErrorMessage('')
+
     try {
-      const response = await api.post('/blogs', data)
+      const formattedData = {
+        ...data,
+        categoryId: data.categoryId ? Number(data.categoryId) : null,
+        tags: data.tags
+          ? data.tags
+              .split(',')
+              .map((tag) => tag.trim())
+              .filter((tag) => tag.length > 0)
+          : [],
+      }
+
+      console.log('Submitting blog data:', formattedData)
+
+      const response = await api.post('/blogs', formattedData)
       const blog = response.data.data
+
+      console.log('✅ Blog created:', blog)
       navigate(`/blog/${blog.slug}`)
     } catch (error) {
-      console.error('Error creating blog:', error)
+      console.error('❌ Error creating blog:', error)
+      setErrorMessage(
+        error.data?.message ||
+          'Something went wrong while publishing the blog. Check console for details.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -48,16 +68,22 @@ function CreateBlog() {
         <p className="text-gray-600 mt-2">Share your thoughts with the world</p>
       </div>
 
+      {errorMessage && (
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4 border border-red-300">
+          {errorMessage}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Basic Information */}
         <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Basic Information
+          </h2>
+
           <div className="space-y-6">
             <div>
-              <label htmlFor="title" className="label">
-                Title *
-              </label>
+              <label className="label">Title *</label>
               <input
                 {...register('title', {
                   required: 'Title is required',
@@ -76,9 +102,7 @@ function CreateBlog() {
             </div>
 
             <div>
-              <label htmlFor="summary" className="label">
-                Summary *
-              </label>
+              <label className="label">Summary *</label>
               <textarea
                 {...register('summary', {
                   required: 'Summary is required',
@@ -97,13 +121,8 @@ function CreateBlog() {
             </div>
 
             <div>
-              <label htmlFor="categoryId" className="label">
-                Category
-              </label>
-              <select
-                {...register('categoryId')}
-                className="input"
-              >
+              <label className="label">Category</label>
+              <select {...register('categoryId')} className="input">
                 <option value="">Select a category</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -114,14 +133,12 @@ function CreateBlog() {
             </div>
 
             <div>
-              <label htmlFor="tags" className="label">
-                Tags
-              </label>
+              <label className="label">Tags</label>
               <input
                 {...register('tags')}
                 type="text"
                 className="input"
-                placeholder="Enter tags separated by commas (e.g., react, javascript, web-development)"
+                placeholder="react, javascript, web-development"
               />
               <p className="text-sm text-gray-500 mt-1">
                 Separate multiple tags with commas
@@ -133,41 +150,31 @@ function CreateBlog() {
         {/* Content */}
         <div className="card p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Content</h2>
-          
-          <div>
-            <label htmlFor="content" className="label">
-              Blog Content *
-            </label>
-            <textarea
-              {...register('content', {
-                required: 'Content is required',
-                minLength: {
-                  value: 100,
-                  message: 'Content must be at least 100 characters',
-                },
-              })}
-              rows={20}
-              className="textarea"
-              placeholder="Write your blog content here. You can use Markdown formatting."
-            />
-            {errors.content && (
-              <p className="error-text">{errors.content.message}</p>
-            )}
-            <p className="text-sm text-gray-500 mt-1">
-              You can use Markdown formatting for rich text
-            </p>
-          </div>
+          <textarea
+            {...register('content', {
+              required: 'Content is required',
+              minLength: {
+                value: 100,
+                message: 'Content must be at least 100 characters',
+              },
+            })}
+            rows={20}
+            className="textarea"
+            placeholder="Write your blog content here..."
+          />
+          {errors.content && (
+            <p className="error-text">{errors.content.message}</p>
+          )}
         </div>
 
-        {/* SEO Settings */}
+        {/* SEO */}
         <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">SEO Settings</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            SEO Settings
+          </h2>
           <div className="space-y-6">
             <div>
-              <label htmlFor="metaTitle" className="label">
-                Meta Title
-              </label>
+              <label className="label">Meta Title</label>
               <input
                 {...register('metaTitle')}
                 type="text"
@@ -177,9 +184,7 @@ function CreateBlog() {
             </div>
 
             <div>
-              <label htmlFor="metaDescription" className="label">
-                Meta Description
-              </label>
+              <label className="label">Meta Description</label>
               <textarea
                 {...register('metaDescription')}
                 rows={3}
@@ -189,9 +194,7 @@ function CreateBlog() {
             </div>
 
             <div>
-              <label htmlFor="metaKeywords" className="label">
-                Meta Keywords
-              </label>
+              <label className="label">Meta Keywords</label>
               <input
                 {...register('metaKeywords')}
                 type="text"
@@ -204,23 +207,10 @@ function CreateBlog() {
 
         {/* Actions */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              type="button"
-              className="btn-secondary flex items-center space-x-2"
-            >
-              <Eye className="h-4 w-4" />
-              <span>Preview</span>
-            </button>
-            
-            <button
-              type="button"
-              className="btn-secondary flex items-center space-x-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Draft</span>
-            </button>
-          </div>
+          <button type="button" className="btn-secondary flex items-center space-x-2">
+            <Eye className="h-4 w-4" />
+            <span>Preview</span>
+          </button>
 
           <button
             type="submit"
